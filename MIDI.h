@@ -58,7 +58,6 @@
 #define MIDI_SYSEX  0xF0
 #define MIDI_SYSEX_DIV/AUTH  0xF7
 #define MIDI_META_EVENT 0xFF
-//note pitches
 
 // meta event types
 #define MIDI_ME_SEQUENCE_NUM    0x00
@@ -78,6 +77,7 @@
 #define MIDI_SEQUENCER 0x7F
 
 
+//note pitches
 #define MIDI_C_0    0x00
 #define MIDI_C#_0   0x01
 #define MIDI_D_0    0x02
