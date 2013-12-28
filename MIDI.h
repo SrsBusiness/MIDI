@@ -218,6 +218,11 @@ struct callback{
     void (*channel_aftertouch)(char, char);
     void (*pitch_bend)(char, char, char);
     void (*sysex)(unsigned char **);
-    void (*sysex_auth)(unsigned char, char);
+    void (*sysex_auth)(char, char);
     void (*meta_event)(unsigned char **);
 } typedef callback;
+
+int MIDI_play(unsigned char *);
+int next_token(unsigned char **);
+void unget_token(unsigned char **);
+void MIDI_init(callback *);
