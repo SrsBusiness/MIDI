@@ -41,3 +41,15 @@
 *.x*
 *.y*
 *.z*
+
+boot_loader/*
+docs/*
+driverlib/*
+gcc/*
+inc/*
+IQmath/*
+sensorlib/*
+third_party/*
+tools/*
+usblib/*
+utils/*
