@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "MIDI.h"
 //const unsigned char midi[100000] __attribute__((section("midi_file")));
-const unsigned char midi[] =  {0x4d,0x54,0x68,0x64,0x00,0x00,0x00,0x06,
+const unsigned char midi[] = {0x4d,0x54,0x68,0x64,0x00,0x00,0x00,0x06,
 0x00,0x01,0x00,0x03,0x01,0x80,0x4d,0x54,
 0x72,0x6b,0x00,0x00,0x00,0x13,0x00,0xff,
 0x51,0x03,0x0d,0x14,0x36,0x00,0xff,0x58,
@@ -5938,11 +5938,11 @@ void controller(char a, char b, char c){
     printf("controller %d %d %d\n", a, b, c); 
 }
 void program_change(char a, char b){
-    printf("program_change %d %d %d\n", a, b); 
+    printf("program_change %d %d\n", a, b); 
 }
 
 void channel_aftertouch(char a, char b){
-    printf("channel_aftertouch %d %d %d\n", a, b); 
+    printf("channel_aftertouch %d %d\n", a, b); 
 }
 
 void pitch_bend(char a, char b, char c){
@@ -5953,7 +5953,7 @@ void sysex(unsigned char **a){
     while(*((*a)++) != 0xF7);
 }
 void sysex_auth(char a, char b){
-    printf("sysex_auth %d %d %d\n", a, b); 
+    printf("sysex_auth %d %d\n", a, b); 
 }
 void meta_event(unsigned char **a){
     printf("meta_event\n");

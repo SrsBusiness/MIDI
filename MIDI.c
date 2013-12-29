@@ -18,14 +18,14 @@ unsigned short next_short(unsigned char *current){
         result = result << 8 | *(current + i);
     return result;
 }
+
 unsigned int next_token(unsigned char **current){
     unsigned int result = 0;
     int i = 0;
     do{
         result = (result << 8) | **current;
         printf("next_token: %u\n", **current);
-    }
-    while((*(*current)++) & 0x80 && i++ < 3);
+    }while((*(*current)++ & 0x80) && (i++ < 3));
     return result;
 }
 
@@ -106,7 +106,7 @@ int MIDI_play(unsigned char *file){
             int time;
             printf("time offset: %d\n", (int)(trackp[i] - save));
             while((time = next_token(trackp + i)) + last_ticks[i] == ticks)
-                last_ticks[i] += time;
+                last_ticks[i] = ticks;
                 printf("time: %u\n", time);
                 unsigned int command = next_token(trackp + i);
                 printf("command: %u\n", command);
