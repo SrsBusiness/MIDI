@@ -223,6 +223,6 @@ struct callback{
 } typedef callback;
 
 int MIDI_play(unsigned char *);
-int next_token(unsigned char **);
+unsigned int next_token(unsigned char **);
 void unget_token(unsigned char **);
 void MIDI_init(callback *);
