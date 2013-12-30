@@ -1,10 +1,12 @@
 #include "MIDI.h"
 #include <stdio.h> 
-#include "tm4c123gh6pm.h"
 
 #define TRACK_LIMIT 20
 
 callback *functions;
+
+
+
 unsigned int next_int(unsigned char *current){
     unsigned int result = 0;
     for(int i = 0; i < 4; i++)
@@ -25,7 +27,9 @@ unsigned int next_token(unsigned char **current){
     do{
         result = (result << 8) | **current;
         printf("next_token: %u\n", **current);
-    }while((*(*current)++ & 0x80) && (i++ < 3));
+        printf("condition check: %d\n", (*(*current)++ & 0x80) && (i++ < 3));
+        (*current)--; i--;
+    }while((i++ < 3) && ((*(*current)++ & 0x80) != 0));
     return result;
 }
 
@@ -105,10 +109,10 @@ int MIDI_play(unsigned char *file){
             // todo: first handle delta time token
             int time;
             printf("time offset: %d\n", (int)(trackp[i] - save));
-            while((time = next_token(trackp + i)) + last_ticks[i] == ticks)
+            while((time = next_token(trackp + i)) + last_ticks[i] == ticks){
                 last_ticks[i] = ticks;
                 printf("time: %u\n", time);
-                unsigned int command = next_token(trackp + i);
+                unsigned char command = *trackp[i]++;
                 printf("command: %u\n", command);
                 switch(command){
                     case MIDI_NOTE_OFF:
@@ -197,6 +201,7 @@ int MIDI_play(unsigned char *file){
                         printf("Location: %d\n", (int)(*(trackp + i) - save));
                         return 1;
                 }
+            }
             printf("not time yet\n");
             unget_token(trackp + i);
         }
