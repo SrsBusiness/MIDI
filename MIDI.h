@@ -48,13 +48,13 @@
 #define MIDI_DATA_DECREMENT 0x61
 
 // MIDI events
-#define MIDI_NOTE_OFF 0x08
-#define MIDI_NOTE_ON 0x09
-#define MIDI_NOTE_AFTERTOUCH 0x0A
-#define MIDI_CONTROLLER 0x0B
-#define MIDI_PROGRAM_CHANGE 0x0C
-#define MIDI_CHANNEL_AFTERTOUCH 0x0D
-#define MIDI_PITCH_BEND 0x0E
+#define MIDI_NOTE_OFF 0x80
+#define MIDI_NOTE_ON 0x90
+#define MIDI_NOTE_AFTERTOUCH 0xA0
+#define MIDI_CONTROLLER 0xB0
+#define MIDI_PROGRAM_CHANGE 0xC0
+#define MIDI_CHANNEL_AFTERTOUCH 0xD0
+#define MIDI_PITCH_BEND 0xE0
 #define MIDI_SYSEX  0xF0
 #define MIDI_SYSEX_AUTH 0xF7
 #define MIDI_META_EVENT 0xFF
@@ -217,12 +217,23 @@ struct callback{
     void (*program_change)(char, char);
     void (*channel_aftertouch)(char, char);
     void (*pitch_bend)(char, char, char);
-    void (*sysex)(unsigned char **);
+    void (*sysex)(char **);
     void (*sysex_auth)(char, char);
-    void (*meta_event)(unsigned char **);
+    void (*me_text)(char *);
+    void (*me_copyright)(char *);
+    void (*me_sequence_track)(char *);
+    void (*me_instrument)(char *);
+    void (*me_lyrics)(char *);
+    void (*me_marker)(char *);
+    void (*me_cue_point)(char *);
+    void (*me_sequencer)(char *);
+
+
 } typedef callback;
 
-int MIDI_play(unsigned char *);
-unsigned int next_token(unsigned char **);
-void unget_token(unsigned char **);
+int MIDI_play(char *);
+int next_token(char **);
+void unget_token(char **);
 void MIDI_init(callback *);
+void midi_sysex(char **, char, short);
+void midi_meta_event(char **, char, short);

@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "MIDI.h"
-//const unsigned char midi[100000] __attribute__((section("midi_file")));
-const unsigned char midi[] = {0x4d,0x54,0x68,0x64,0x00,0x00,0x00,0x06,
+//const char midi[100000] __attribute__((section("midi_file")));
+const char midi[] = {0x4d,0x54,0x68,0x64,0x00,0x00,0x00,0x06,
 0x00,0x01,0x00,0x03,0x01,0x80,0x4d,0x54,
 0x72,0x6b,0x00,0x00,0x00,0x13,0x00,0xff,
 0x51,0x03,0x0d,0x14,0x36,0x00,0xff,0x58,
@@ -5948,14 +5948,17 @@ void channel_aftertouch(char a, char b){
 void pitch_bend(char a, char b, char c){
     printf("pitch_bend %d %d %d\n", a, b, c); 
 }
-void sysex(unsigned char **a){
+void sysex(char **a){
+    char* save = *a;
     printf("sysex\n");
-    while(*((*a)++) != 0xF7);
+    while(*(*a)++ != 0xF7){
+        printf("sysex offset: %d\n", (int)(*a - save));
+    }
 }
 void sysex_auth(char a, char b){
     printf("sysex_auth %d %d\n", a, b); 
 }
-void meta_event(unsigned char **a){
+void meta_event(char **a){
     printf("meta_event\n");
     switch(next_token(a)){
         case MIDI_ME_SEQUENCE_NUM:

@@ -4,37 +4,37 @@
 #define TRACK_LIMIT 20
 
 callback *functions;
+char *trackp[TRACK_LIMIT];
+char eof[TRACK_LIMIT];
+short tpqn = 24;
+int mpb = 500000;
+int ticks = 0;
 
-
-
-unsigned int next_int(unsigned char *current){
-    unsigned int result = 0;
+int next_int(char *current){
+    int result = 0;
     for(int i = 0; i < 4; i++)
         result = result << 8 | *(current + i);
     return result;
 }
 
-unsigned short next_short(unsigned char *current){
-    unsigned short result = 0;
+short next_short(char *current){
+    short result = 0;
     for(int i = 0; i < 2; i++)
         result = result << 8 | *(current + i);
     return result;
 }
 
-unsigned int next_token(unsigned char **current){
-    unsigned int result = 0;
+int next_token(char **current){
+    int result = 0;
     int i = 0;
     do{
         result = (result << 8) | **current;
-        printf("next_token: %u\n", **current);
-        printf("condition check: %d\n", (*(*current)++ & 0x80) && (i++ < 3));
-        (*current)--; i--;
     }while((i++ < 3) && ((*(*current)++ & 0x80) != 0));
     return result;
 }
 
-int init_tracks(unsigned char *file, unsigned char **trackp, int tracks){
-    unsigned char *save = file;
+int init_tracks(char *file, char **trackp, int tracks){
+    char *save = file;
     while(file && next_int(file) != MIDI_TRACK)// should loop 2 times
         file++;
     if(!file){
@@ -56,8 +56,8 @@ void MIDI_init(callback *callbacks){
     functions = callbacks;
 }
 
-unsigned char and(unsigned char *array, short length){
-    unsigned char result = 1;
+char and(char *array, short length){
+    char result = 1;
     for(int i = 0; i < length; i++)
         result  = result && array[i];
     return result;
@@ -65,7 +65,7 @@ unsigned char and(unsigned char *array, short length){
 
 
 
-void unget_token(unsigned char **current){
+void unget_token(char **current){
     (*current)--; 
     while((*(*current - 1)) & 0x80)
         (*current)--;
@@ -73,10 +73,10 @@ void unget_token(unsigned char **current){
 
 
 
-int MIDI_play(unsigned char *file){
-    unsigned char *save = file;
+int MIDI_play(char *file){
+    char *save = file;
     if(next_int(file) != MIDI_HEADER){
-        printf("Improper Header %d %d\n", *(unsigned int *)file, MIDI_HEADER);
+        printf("Improper Header %d %d\n", *(int *)file, MIDI_HEADER);
         return 1;
     }
     file += 4;
@@ -85,36 +85,33 @@ int MIDI_play(unsigned char *file){
         return 1;
     }
     file += 4;
-    unsigned short type = next_short(file); // type
+    short type = next_short(file); // type
     file += 2;
-    unsigned short tracks = next_short(file); // # of tracks
+    short tracks = next_short(file); // # of tracks
     file += 2;
-    unsigned char *trackp[TRACK_LIMIT];
     if(init_tracks(file, trackp, tracks)){
         printf("Init tracks failed\n");
         return 1;
     }
-    unsigned char eof[TRACK_LIMIT];
     for(int i = 0; i < tracks; i++)
         eof[i] = 0;
-    unsigned short tpqn = next_short(file); // time divistion
+    tpqn = next_short(file); // time divistion
     file += 2;
-    unsigned int last_ticks[TRACK_LIMIT];
+    int last_ticks[TRACK_LIMIT];
     for(int i = 0; i < tracks; i++)
         last_ticks[i] = 0;
-    unsigned int ticks = 0;
     while(!and(eof, tracks)){
-        (*(functions -> tick))();
-        for(unsigned int i = 0; i < tracks; i++){
+        (*(functions -> tick))(mpb, tpqn);
+        for(int i = 0; i < tracks; i++){
             // todo: first handle delta time token
             int time;
             printf("time offset: %d\n", (int)(trackp[i] - save));
             while((time = next_token(trackp + i)) + last_ticks[i] == ticks){
                 last_ticks[i] = ticks;
                 printf("time: %u\n", time);
-                unsigned char command = *trackp[i]++;
+                char command = *trackp[i]++;
                 printf("command: %u\n", command);
-                switch(command){
+                switch(command & 0xF0){
                     case MIDI_NOTE_OFF:
                         if(functions -> note_off)
                             (*(functions -> note_off))((char)next_token(trackp + i),
@@ -178,22 +175,7 @@ int MIDI_play(unsigned char *file){
                         }
                         break;
                     case MIDI_SYSEX:
-                        if(functions -> sysex)
-                            (*(functions -> sysex))(trackp + i);
-                        else
-                            while(*(trackp[i]++) != 0xF7);
-                        break;
-                    case MIDI_SYSEX_AUTH:
-                        if(functions -> sysex_auth)
-                            (*(functions -> sysex_auth))((char)next_token(trackp + i),
-                                    (char)next_token(trackp + i));
-                        else
-                            for(int i = 0; i < 2; i++)
-                                next_token(trackp + i);
-                        break;
-                    case MIDI_META_EVENT:
-                        // this function is NOT allowed to be null;
-                        (*(functions -> sysex))(trackp + i);
+                        midi_sysex(trackp + i, command, i);
                         break;
                     default:
                         unget_token(trackp + i);
@@ -210,3 +192,140 @@ int MIDI_play(unsigned char *file){
     return 0;
 }
 
+void midi_sysex(char **current, char command, short i){
+    switch(command){
+        case MIDI_META_EVENT:
+            char type = *(*current)++;
+            midi_meta_event(current, type, i);
+            break;
+        case MIDI_SYSEX_AUTH:
+            if(functions -> sysex_auth)
+                (*(functions -> sysex_auth))((char)next_token(current),
+                        (char)next_token(current));
+            else
+                for(int i = 0; i < 2; i++)
+                    next_token(current);
+            break;
+        default:
+            if(functions -> sysex)
+                (*(functions -> sysex))(current);
+            else
+                while(*((*current)++) != 0xF7);
+            break;
+    }
+}
+
+void midi_meta_event(char **current, char type, short i){
+    switch(type){
+        case MIDI_ME_SEQUENCE_NUM:
+            (*current) += 3;
+            break;
+        case MIDI_ME_TEXT:
+            if(!(functions -> me_text))
+                return;
+            int length = next_token(current);
+            char text[length + 1];
+            for(int i = 0; i < length; i++){
+                text[i] = *(*current)++;
+            }
+            text[length] = 0;
+            (*(functions -> me_text))(text);
+            break;
+        case MIDI_ME_COPYRIGHT:
+            if(!(functions -> me_copyright))
+                return;
+            int length = next_token(current);
+            char text[length + 1];
+            for(int i = 0; i < length; i++){
+                text[i] = *(*current)++;
+            }
+            text[length] = 0;
+            (*(functions -> me_copyright))(text);
+            break;
+        case MIDI_ME_SEQUENCE_TRACK:
+            if(!(functions -> me_sequence_track))
+                return;
+            int length = next_token(current);
+            char text[length + 1];
+            for(int i = 0; i < length; i++){
+                text[i] = *(*current)++;
+            }
+            text[length] = 0;
+            (*(functions -> me_sequence_track))(text);
+            break;
+        case MIDI_ME_INSTRUMENT:
+            if(!(functions -> me__instrument))
+                return;
+            int length = next_token(current);
+            char text[length + 1];
+            for(int i = 0; i < length; i++){
+                text[i] = *(*current)++;
+            }
+            text[length] = 0;
+            (*(functions -> me_instrument))(text); 
+            break;
+        case MIDI_ME_LYRICS:
+            if(!(functions -> me_lyrics))
+                return;
+            int length = next_token(current);
+            char text[length + 1];
+            for(int i = 0; i < length; i++){
+                text[i] = *(*current)++;
+            }
+            text[length] = 0;
+            (*(functions -> me_lyrics))(text);
+            break;
+        case MIDI_ME_MARKER:
+            if(!(functions -> me_marker))
+                return;
+            int length = next_token(current);
+            char text[length + 1];
+            for(int i = 0; i < length; i++){
+                text[i] = *(*current)++;
+            }
+            text[length] = 0;
+            (*(functions -> me_marker))(text);
+            break;
+        case MIDI_ME_CUE_POINT:
+            if(!(functions -> me_cue_point))
+                return;
+            int length = next_token(current);
+            char text[length + 1];
+            for(int i = 0; i < length; i++){
+                text[i] = *(*current)++;
+            }
+            text[length] = 0;
+            (*(functions -> me_cue_point))(text);
+            break;
+        case MIDI_CHANNEL_PREFIX:
+            (*current) += 2;
+            break;
+        case MIDI_EOT:
+            eof[i] = 1; 
+            break;
+        case MIDI_SET_TEMPO:
+            mpb = next_int(*current);
+            (*current) += 4;
+            break;
+        case MIDI_SMPTE_OFFSET:
+            (*current) += 6;
+            break;
+        case MIDI_TIME_SIGNATURE:
+            (*current) += 5;
+            break;
+        case MIDI_KEY:
+            (*current) += 3;
+            break;
+        case MIDI_SEQUENCER:
+            int length = next_token(current);
+            char text[length + 1];
+            for(int i = 0; i < length; i++){
+                text[i] = *(*current)++;
+            }
+            text[length] = 0;
+            (*(functions -> me_sequencer))(text);
+            break;
+        default:
+            break;
+    }
+}
